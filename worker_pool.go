@@ -1,4 +1,4 @@
-package util
+package wp
 
 import "sync"
 
@@ -68,7 +68,6 @@ func (p *Pool) Start() {
 		for {
 			select {
 			case job := <-p.jobs:
-				p.WaitGroup.Add(1)
 				go func(job interface{}) {
 					jobChan := <-p.WorkerPool
 					jobChan <- job
@@ -89,6 +88,7 @@ func (p *Pool) Wait() {
 // Add queue a job to the worker pool
 // with your argument struct
 func (p *Pool) Add(job interface{}) {
+	p.WaitGroup.Add(1)
 	go func() {
 		p.jobs <- job
 	}()
@@ -104,6 +104,7 @@ func (p *Pool) Quit() {
 			case wp := <-p.WorkerPool:
 				close(wp)
 			default:
+				close(p.WorkerPool)
 				return
 			}
 		}
