@@ -1,13 +1,17 @@
 package wp
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestInit(t *testing.T) {
 	assertChan := make(chan int, 10000)
 	tests := 10000
-	p := NewPool(100, func(args interface{}) {
+	p := NewPool(100, nil, func(args interface{}) error {
 		s := args.(chan int)
 		s <- 0
+		return fmt.Errorf("lol")
 	})
 	p.Start()
 	for i := 0; i < 10000; i++ {
