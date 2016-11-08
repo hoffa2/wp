@@ -13,7 +13,7 @@ func jobfunc(args interface{}) {
 }
 
 
-pool := NewPool(100, jobfunc)
+pool := NewPool(100, nil, jobfunc)
 pool.Start()
 pool.Add("Hello workerpool")
 
@@ -38,7 +38,7 @@ func (e *Example) Jobfunc(args interface{}) {
 
 e := Example{results: make(chan float, 100)}
 
-pool := NewPool(100, e.Jobfunc)
+pool := NewPool(100, os.Stdout, e.Jobfunc)
 pool.Start()
 pool.Add(argument{a:10, b:20})
 
