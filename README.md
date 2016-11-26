@@ -7,7 +7,7 @@ defined input argument.
 ## Simple Example
 ```go
 
-func jobfunc(args interface{}) {
+func jobfunc(args interface{}) error {
     s := args.(string)
     fmt.Println(s)
 }
@@ -31,8 +31,10 @@ type argument struct {
     b float
 }
 
-func (e *Example) Jobfunc(args interface{}) {
-    ex := args.(argument)
+func (e *Example) Jobfunc(args interface{}) error {
+    if ex, ok := args.(argument); !ok {
+        return fmt.Errorf("Type is not mytype - instead got %s", reflect.TypeOf(args))
+    }
     e.results <- ex.a / ex.b
 }
 
