@@ -107,8 +107,10 @@ func (p *Pool) Add(job interface{}) {
 	}()
 }
 
-// Quit shuts the pool down after
-// all jobs are done
+// Quit shuts the pool.
+// Note that Quit must be called after
+// a call to Wait in order to ensure
+// that all workers have finished
 func (p *Pool) Quit() {
 	go func() {
 		p.quit <- true
