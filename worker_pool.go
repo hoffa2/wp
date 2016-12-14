@@ -12,35 +12,34 @@ type Pool struct {
 	errPrint    io.Writer
 	jobfunc     func(in interface{}) error
 	jobs        chan interface{}
-	sync.WaitGroup
-	WorkerPool chan chan interface{}
-	quit       chan bool
+	waitGroup   sync.WaitGroup
+	workerPool  chan chan interface{}
+	quit        chan bool
 }
 
 type worker struct {
 	jobfunc    func(in interface{}) error
-	WorkerPool chan chan interface{}
+	workerPool chan chan interface{}
 	jobChannel chan interface{}
-	*sync.WaitGroup
-	errPrint io.Writer
+	waitGroup  *sync.WaitGroup
+	errPrint   io.Writer
 }
 
 func newWorker(WorkerPool chan chan interface{},
 	jobfunc func(in interface{}) error, s *sync.WaitGroup, w io.Writer) *worker {
 	return &worker{
 		jobfunc:    jobfunc,
-		WaitGroup:  s,
+		waitGroup:  s,
 		errPrint:   w,
-		WorkerPool: WorkerPool,
+		workerPool: WorkerPool,
 		jobChannel: make(chan interface{}),
 	}
 }
 
-// SetErrOutput set to which errors are written
-
+// Start Start the workerpool
 func (w *worker) Start() {
 	go func() {
-		w.WorkerPool <- w.jobChannel
+		w.workerPool <- w.jobChannel
 		for {
 			select {
 			case job, open := <-w.jobChannel:
@@ -51,8 +50,8 @@ func (w *worker) Start() {
 				if err != nil && w.errPrint != nil {
 					w.errPrint.Write([]byte(err.Error()))
 				}
-				w.WaitGroup.Done()
-				w.WorkerPool <- w.jobChannel
+				w.waitGroup.Done()
+				w.workerPool <- w.jobChannel
 			}
 		}
 	}()
@@ -66,7 +65,7 @@ func NewPool(numWorkers int, w io.Writer, jobfunc func(in interface{}) error) *P
 		jobfunc:    jobfunc,
 		errPrint:   w,
 		jobs:       make(chan interface{}, numWorkers),
-		WorkerPool: make(chan chan interface{}, numWorkers),
+		workerPool: make(chan chan interface{}, numWorkers),
 	}
 }
 
@@ -74,7 +73,7 @@ func NewPool(numWorkers int, w io.Writer, jobfunc func(in interface{}) error) *P
 // Usage go pool.Start()
 func (p *Pool) Start() {
 	for i := 0; i < p.nWorkers; i++ {
-		w := newWorker(p.WorkerPool, p.jobfunc, &p.WaitGroup, p.errPrint)
+		w := newWorker(p.workerPool, p.jobfunc, &p.waitGroup, p.errPrint)
 		w.Start()
 	}
 
@@ -83,7 +82,7 @@ func (p *Pool) Start() {
 			select {
 			case job := <-p.jobs:
 				go func(job interface{}) {
-					jobChan := <-p.WorkerPool
+					jobChan := <-p.workerPool
 					jobChan <- job
 				}(job)
 			case <-p.quit:
@@ -96,13 +95,13 @@ func (p *Pool) Start() {
 // Wait blocks until there are no more
 // busy workers
 func (p *Pool) Wait() {
-	p.WaitGroup.Wait()
+	p.waitGroup.Wait()
 }
 
 // Add queue a job to the worker pool
 // with your argument struct
 func (p *Pool) Add(job interface{}) {
-	p.WaitGroup.Add(1)
+	p.waitGroup.Add(1)
 	go func() {
 		p.jobs <- job
 	}()
@@ -115,10 +114,10 @@ func (p *Pool) Quit() {
 		p.quit <- true
 		for {
 			select {
-			case wp := <-p.WorkerPool:
+			case wp := <-p.workerPool:
 				close(wp)
 			default:
-				close(p.WorkerPool)
+				close(p.workerPool)
 				return
 			}
 		}

@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+type test struct{}
+
 func TestInit(t *testing.T) {
 	assertChan := make(chan int, 10000)
 	tests := 10000
